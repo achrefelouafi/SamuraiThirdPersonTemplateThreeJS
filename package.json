@@ -2,7 +2,7 @@
   "name": "character-equipment",
   "version": "1.0.0",
   "private": true,
-  "description": "Three.js character stage — cinematic lighting, orbit rig and a Mixamo idle rig, built as the base for equipping gear.",
+  "description": "A third-person Three.js template: a rigged samurai on an endless procedural night landscape, with motion-warped melee, summons, flight, ragdoll deaths and an equipment studio.",
   "type": "module",
   "scripts": {
     "dev": "vite",
