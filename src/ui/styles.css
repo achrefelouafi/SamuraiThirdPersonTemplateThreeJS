@@ -1,0 +1,1152 @@
+/* The page is a full-bleed canvas with a boot veil over it and one hint line. */
+
+:root {
+  /* Close to the sky's own horizon, so the page never flashes before it draws. */
+  --stage: #121820;
+  --ink: #dce8f7;
+  --accent: #7fd4ff;
+
+  /*
+   * The move HUD's own palette, and only its own. The studio panels stay cold
+   * and instrumental — they are a tool, and a tool should not be dressed up.
+   * What the character does is the other thing, and it gets lacquer, gold leaf
+   * and vermilion: black sumi ink, a hairline of gold on every edge, and the
+   * red of a hanko kept for the one thing that is happening right now.
+   */
+  --sumi: #06080b;
+  --lacquer: #17120f;
+  --gold: #d9b26a;
+  --blood: #d8402c;
+  --blood-lit: #ff6a4d;
+  --washi: #efe6d6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--stage);
+  color: var(--ink);
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+
+#viewport {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  touch-action: none;
+  outline: none;
+}
+
+/* ---------------------------------------------------------------- loader */
+
+.loader {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 50% 45%, #1b242f 0%, var(--stage) 70%);
+  transition: opacity 0.6s ease, visibility 0.6s ease;
+}
+
+.loader--done {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.loader__inner {
+  width: min(360px, 76vw);
+  text-align: center;
+}
+
+.loader__title {
+  margin: 0 0 1.6rem;
+  font-size: 1.1rem;
+  font-weight: 500;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.loader__bar {
+  height: 2px;
+  width: 100%;
+  background: rgba(220, 232, 247, 0.12);
+  overflow: hidden;
+}
+
+.loader__bar i {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
+  transition: width 0.35s ease;
+}
+
+.loader__status {
+  margin: 0.9rem 0 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  color: rgba(220, 232, 247, 0.55);
+}
+
+.loader--failed .loader__status {
+  color: #ff8f80;
+}
+
+.loader--failed .loader__bar i {
+  background: #ff8f80;
+  box-shadow: none;
+}
+
+/* ----------------------------------------------------------------- toast */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  /* Clear of the move panels below it, which own the bottom of the screen. */
+  bottom: 9.6rem;
+  transform: translateX(-50%) translateY(6px);
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(127, 212, 255, 0.25);
+  background: rgba(18, 24, 32, 0.9);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  z-index: 20;
+}
+
+.toast.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ----------------------------------------------------------------- stats */
+
+.stats {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 20;
+  min-width: 8.6rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid rgba(127, 212, 255, 0.14);
+  background: rgba(10, 14, 20, 0.82);
+  backdrop-filter: blur(14px);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  user-select: none;
+}
+
+.stats[hidden] {
+  display: none;
+}
+
+.stats__headline {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.stats__value {
+  font-size: 1.35rem;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--accent);
+  transition: color 0.25s ease;
+}
+
+.stats.is-fair .stats__value {
+  color: #ffd479;
+}
+
+.stats.is-poor .stats__value {
+  color: #ff8f80;
+}
+
+.stats__unit {
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: rgba(220, 232, 247, 0.38);
+}
+
+.stats__rows {
+  margin: 0.5rem 0 0;
+  padding-top: 0.45rem;
+  border-top: 1px solid rgba(127, 212, 255, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.stats__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.9rem;
+}
+
+.stats__rowLabel {
+  font-size: 0.56rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: rgba(220, 232, 247, 0.38);
+}
+
+.stats__rowValue {
+  margin: 0;
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  color: rgba(220, 232, 247, 0.75);
+}
+
+/* ------------------------------------------------------- character screen */
+
+/*
+ * The equipment panel. It frames the viewport rather than covering it: a bar
+ * across the top, the catalog down the left, the inspector down the right, and
+ * the whole middle of the screen left to the body being dressed. The container
+ * itself never takes the pointer — only the panels do — so a drag that starts
+ * between them still orbits the camera.
+ */
+
+.cs {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  pointer-events: none;
+  display: grid;
+  grid-template-columns: 260px 1fr 300px;
+  grid-template-rows: auto 1fr;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+}
+
+.cs[hidden] {
+  display: none;
+}
+
+.cs__bar,
+.cs__rail,
+.cs__inspector {
+  pointer-events: auto;
+  border: 1px solid rgba(127, 212, 255, 0.14);
+  background: linear-gradient(180deg, rgba(16, 22, 30, 0.94), rgba(10, 14, 20, 0.92));
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+}
+
+/* ---- top bar ---- */
+
+.cs__bar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  padding: 0.5rem 0.75rem;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.cs__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  color: rgba(220, 232, 247, 0.9);
+  white-space: nowrap;
+}
+
+.cs__pip {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+}
+
+.cs__group {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding-left: 1.1rem;
+  border-left: 1px solid rgba(127, 212, 255, 0.12);
+  white-space: nowrap;
+}
+
+.cs__groupLabel {
+  margin-right: 0.2rem;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: rgba(220, 232, 247, 0.38);
+}
+
+.cs__close {
+  margin-left: auto;
+}
+
+/* ---- rail ---- */
+
+.cs__rail {
+  grid-column: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0.6rem;
+}
+
+.cs__tabs {
+  display: flex;
+  gap: 0.3rem;
+  margin-bottom: 0.6rem;
+}
+
+.cs__tab {
+  flex: 1;
+}
+
+.cs__cards {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  scrollbar-width: thin;
+}
+
+.cs__card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'name state'
+    'note state';
+  gap: 0.15rem 0.5rem;
+  padding: 0.6rem 0.65rem;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ink);
+  border: 1px solid rgba(127, 212, 255, 0.12);
+  border-left: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.015);
+  font: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.cs__card:hover {
+  background: rgba(127, 212, 255, 0.07);
+}
+
+.cs__card.is-equipped {
+  border-left-color: var(--accent);
+}
+
+.cs__card.is-selected {
+  background: rgba(127, 212, 255, 0.12);
+  border-color: rgba(127, 212, 255, 0.4);
+}
+
+.cs__cardName {
+  grid-area: name;
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+}
+
+.cs__cardNote {
+  grid-area: note;
+  font-size: 0.62rem;
+  line-height: 1.35;
+  color: rgba(220, 232, 247, 0.4);
+}
+
+.cs__cardState {
+  grid-area: state;
+  align-self: center;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.56rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgba(220, 232, 247, 0.5);
+  border: 1px solid rgba(127, 212, 255, 0.18);
+}
+
+.cs__card.is-equipped .cs__cardState {
+  color: #05121a;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Locked gear cannot come off — the chip reads as a state, not an action. */
+.cs__card.is-locked.is-equipped .cs__cardState {
+  color: rgba(220, 232, 247, 0.75);
+  background: transparent;
+  border-color: rgba(220, 232, 247, 0.3);
+}
+
+.cs__card.is-pending .cs__cardState {
+  color: var(--accent);
+  animation: cs-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes cs-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.cs__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.3rem;
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid rgba(127, 212, 255, 0.12);
+}
+
+.cs__actions .cs__btn:last-child {
+  grid-column: 1 / -1;
+}
+
+/* ---- inspector ---- */
+
+.cs__inspector {
+  grid-column: 3;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0.7rem;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.cs__title {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--ink);
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid rgba(127, 212, 255, 0.14);
+}
+
+.cs__empty {
+  margin: 0.9rem 0 0;
+  font-size: 0.66rem;
+  line-height: 1.6;
+  color: rgba(220, 232, 247, 0.35);
+}
+
+.cs__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding-top: 0.8rem;
+}
+
+/* The gizmo is holding the fire box, so the piece's own numbers are not what
+   the handles in the viewport are writing. Still readable, still editable —
+   only quietened, so it is obvious which of the two is live. */
+.cs__body.is-muted {
+  opacity: 0.45;
+}
+
+.cs__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.cs__sectionLabel {
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: rgba(220, 232, 247, 0.38);
+}
+
+/* Three checkboxes that are read together — X, Y and Z belong on one line. */
+.cs__section--inline {
+  flex-flow: row wrap;
+  align-items: center;
+  gap: 0.15rem 0.75rem;
+}
+
+.cs__section--inline .cs__sectionLabel {
+  flex-basis: 100%;
+}
+
+.cs__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.cs__fieldLabel {
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: rgba(220, 232, 247, 0.38);
+}
+
+.cs__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.3rem;
+}
+
+/* ---- controls ---- */
+
+.cs__btn {
+  padding: 0.35rem 0.6rem;
+  font: inherit;
+  font-size: 0.64rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(220, 232, 247, 0.75);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(127, 212, 255, 0.16);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.cs__btn:hover {
+  color: var(--ink);
+  background: rgba(127, 212, 255, 0.12);
+  border-color: rgba(127, 212, 255, 0.35);
+}
+
+.cs__btn.is-active {
+  color: #05121a;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.cs__select {
+  width: 100%;
+  padding: 0.35rem 0.4rem;
+  font: inherit;
+  font-size: 0.68rem;
+  color: var(--ink);
+  background: rgba(8, 12, 17, 0.9);
+  border: 1px solid rgba(127, 212, 255, 0.2);
+}
+
+.cs__toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(220, 232, 247, 0.6);
+  cursor: pointer;
+}
+
+.cs__toggle input {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.cs__slider {
+  display: grid;
+  grid-template-columns: 5.4rem 1fr 3.4rem 0.8rem;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.cs__bar .cs__slider {
+  grid-template-columns: 1fr 3.2rem;
+  width: 9rem;
+}
+
+.cs__bar .cs__sliderLabel,
+.cs__bar .cs__unit {
+  display: none;
+}
+
+.cs__sliderLabel {
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  color: rgba(220, 232, 247, 0.55);
+}
+
+.cs__unit {
+  font-size: 0.58rem;
+  color: rgba(220, 232, 247, 0.3);
+}
+
+.cs__slider input[type='range'] {
+  width: 100%;
+  height: 2px;
+  appearance: none;
+  background: rgba(220, 232, 247, 0.16);
+  cursor: pointer;
+}
+
+.cs__slider input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(127, 212, 255, 0.55);
+}
+
+.cs__slider input[type='range']::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.cs__number {
+  width: 100%;
+  padding: 0.2rem 0.3rem;
+  font: inherit;
+  font-size: 0.64rem;
+  color: var(--ink);
+  background: rgba(8, 12, 17, 0.9);
+  border: 1px solid rgba(127, 212, 255, 0.16);
+}
+
+.cs__number:focus,
+.cs__select:focus,
+.cs__btn:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/*
+ * The stage editor (lil-gui) auto-places itself in the top-right corner — under
+ * the inspector. While the character screen is up it moves inboard and below the
+ * bar instead, so the two panels can be used at the same time.
+ */
+body.cs-open .lil-gui.lil-auto-place,
+body.cs-open .lil-gui.autoPlace {
+  top: 3.6rem;
+  right: 320px;
+  max-height: calc(100vh - 5rem);
+}
+
+/* Same move for the readout, which otherwise sits under the bar and the rail. */
+body.cs-open .stats {
+  top: 3.6rem;
+  left: 280px;
+}
+
+/* Narrow windows: the rails shrink and the bar wraps into a scroller. */
+@media (max-width: 1100px) {
+  .cs {
+    grid-template-columns: 210px 1fr 250px;
+  }
+
+  body.cs-open .lil-gui.lil-auto-place,
+  body.cs-open .lil-gui.autoPlace {
+    right: 270px;
+  }
+
+  body.cs-open .stats {
+    left: 230px;
+  }
+}
+
+/* ------------------------------------------------------------------- hud */
+
+/*
+ * The moves, along the bottom centre — see `ui/ActionHUD.js`.
+ *
+ * One panel per category, and each panel is a different object: the techniques
+ * are a rack of lacquer plates, the abilities are a seal, and movement is a
+ * strip of trim above both. The player should be able to tell which panel they
+ * are looking at from the corner of an eye, mid-swing, without reading a word
+ * of it — that is the whole reason the three do not share a shape.
+ *
+ * At rest the whole thing is nearly monochrome, and colour means *now*: the
+ * vermilion only ever appears on the one move the body is committed to.
+ *
+ * The HUD never takes the pointer: it sits over the stage, and a drag that
+ * starts on it should still orbit the camera.
+ */
+
+.hud {
+  position: fixed;
+  left: 50%;
+  bottom: 1.1rem;
+  transform: translateX(-50%);
+  z-index: 18;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  pointer-events: none;
+  user-select: none;
+}
+
+.hud__row {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.1rem;
+}
+
+/*
+ * The panels beside each other hang from their headings rather than standing on
+ * a common floor: the seal is a little taller than the plates, and a heading out
+ * of line reads as a mistake where a round thing sitting slightly low does not.
+ */
+.hud__row--main {
+  align-items: flex-start;
+}
+
+.hud__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+/* ---- panel headings ---- */
+
+/*
+ * A mark and a word, in the ruled-paper grey the studio uses for its own
+ * labels. The kanji carries the identity; the word is there for the first
+ * minute of play and stops being read after that, so it is the quieter half.
+ */
+.hud__head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding-bottom: 0.1rem;
+}
+
+.hud__kanji {
+  font-family: 'Yu Mincho', 'Hiragino Mincho ProN', 'MS Mincho', serif;
+  font-size: 0.78rem;
+  line-height: 1;
+  color: rgba(216, 64, 44, 0.72);
+}
+
+.hud__label {
+  font-size: 0.52rem;
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  color: rgba(239, 230, 214, 0.32);
+}
+
+.hud__items {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.4rem;
+}
+
+/* The icons themselves, from `ui/icons.js`: they take the chip's own colour. */
+.hud__icon,
+.tech__icon,
+.seal__icon,
+.move__icon {
+  display: block;
+  line-height: 0;
+}
+
+.tech__icon svg,
+.seal__icon svg,
+.move__icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- techniques: the rack of plates ---- */
+
+/*
+ * Angular, heavy, and read as a set of three. Each plate is black lacquer with
+ * a gold hairline, a vermilion edge along the top and a gold bracket cut into
+ * the top-left corner where the key sits.
+ */
+
+.tech {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  width: 4.9rem;
+  padding: 0.75rem 0.3rem 0.45rem;
+  color: rgba(239, 230, 214, 0.62);
+  border: 1px solid rgba(217, 178, 106, 0.16);
+  background: linear-gradient(170deg, rgba(23, 18, 15, 0.9), rgba(6, 8, 11, 0.92));
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
+  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease,
+    box-shadow 0.18s ease, transform 0.18s ease, opacity 0.18s ease, filter 0.18s ease;
+}
+
+/* The vermilion along the lip of the plate. */
+.tech::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  top: -1px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--blood), transparent);
+  opacity: 0.5;
+  transition: opacity 0.18s ease;
+}
+
+/* The gold bracket, framing the key cap. */
+.tech::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 12px;
+  height: 12px;
+  border-left: 1px solid var(--gold);
+  border-top: 1px solid var(--gold);
+  opacity: 0.3;
+  transition: opacity 0.18s ease;
+}
+
+.tech__key {
+  position: absolute;
+  left: 0.42rem;
+  top: 0.28rem;
+  font-size: 0.54rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  opacity: 0.75;
+}
+
+.tech__icon {
+  width: 1.85rem;
+  height: 1.85rem;
+}
+
+.tech__name {
+  font-size: 0.55rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Committed. The plate lifts, takes the lacquer's red, and is the only thing
+   on the bottom of the screen with any colour in it. */
+.tech.is-active {
+  transform: translateY(-3px);
+  color: var(--washi);
+  border-color: rgba(216, 64, 44, 0.6);
+  background: linear-gradient(170deg, rgba(88, 24, 16, 0.92), rgba(20, 9, 7, 0.94));
+  box-shadow: 0 0 22px rgba(216, 64, 44, 0.34), 0 12px 30px rgba(0, 0, 0, 0.55);
+}
+
+.tech.is-active::before,
+.tech.is-active::after {
+  opacity: 1;
+}
+
+.tech.is-active .tech__icon {
+  color: var(--blood-lit);
+  filter: drop-shadow(0 0 6px rgba(255, 106, 77, 0.55));
+}
+
+/* ---- abilities: the seal ---- */
+
+/*
+ * A mon, not a plate — round where the techniques are square, so the eye never
+ * mistakes the two. The ring around it turns while the ability is out, which is
+ * the only motion anywhere in the HUD and therefore reads instantly.
+ */
+
+/* The heading sits over the middle of the seal, not over its left edge. */
+.hud__panel--ability .hud__head {
+  justify-content: center;
+}
+
+.seal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Room under the disc for the key cap struck through its rim. */
+  gap: 0.55rem;
+  color: rgba(239, 230, 214, 0.62);
+  transition: color 0.2s ease, opacity 0.2s ease, filter 0.2s ease;
+}
+
+.seal__disc {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 3.35rem;
+  height: 3.35rem;
+  border-radius: 50%;
+  border: 1px solid rgba(217, 178, 106, 0.28);
+  background: radial-gradient(circle at 50% 34%, rgba(60, 24, 18, 0.85), rgba(6, 8, 11, 0.93) 72%);
+  backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.6), 0 10px 24px rgba(0, 0, 0, 0.5);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.seal__ring {
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 1px dashed rgba(217, 178, 106, 0.26);
+  animation: seal-turn 18s linear infinite;
+  animation-play-state: paused;
+  transition: border-color 0.2s ease, opacity 0.2s ease;
+}
+
+.seal__icon {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.seal__name {
+  font-size: 0.55rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.seal__key {
+  position: absolute;
+  bottom: -0.42rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.06rem 0.34rem;
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: rgba(6, 8, 11, 0.95);
+  border: 1px solid rgba(217, 178, 106, 0.35);
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.seal.is-active .seal__key {
+  color: var(--washi);
+  border-color: rgba(216, 64, 44, 0.7);
+}
+
+/* Out there somewhere: the seal burns and its ring starts to turn. */
+.seal.is-active {
+  color: var(--washi);
+}
+
+.seal.is-active .seal__disc {
+  border-color: rgba(216, 64, 44, 0.75);
+  background: radial-gradient(circle at 50% 34%, rgba(126, 34, 22, 0.95), rgba(14, 8, 8, 0.94) 74%);
+  box-shadow: inset 0 0 18px rgba(216, 64, 44, 0.3), 0 0 26px rgba(216, 64, 44, 0.35);
+  animation: seal-pulse 1.8s ease-in-out infinite;
+}
+
+.seal.is-active .seal__ring {
+  border-color: rgba(255, 106, 77, 0.6);
+  animation-play-state: running;
+}
+
+.seal.is-active .seal__icon {
+  color: var(--blood-lit);
+  filter: drop-shadow(0 0 7px rgba(255, 106, 77, 0.6));
+}
+
+@keyframes seal-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes seal-pulse {
+  50% {
+    box-shadow: inset 0 0 22px rgba(216, 64, 44, 0.45), 0 0 34px rgba(216, 64, 44, 0.5);
+  }
+}
+
+/* ---- movement: the strip ---- */
+
+/*
+ * The quietest thing on the screen, and deliberately: it is one line of trim
+ * over the panels that matter, with a gold hairline under it and nothing else.
+ */
+
+.hud__panel--movement .hud__head {
+  display: none;
+}
+
+.move {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.22rem 0.6rem 0.28rem;
+  color: rgba(239, 230, 214, 0.4);
+  border-bottom: 1px solid rgba(217, 178, 106, 0.18);
+  background: linear-gradient(180deg, transparent, rgba(6, 8, 11, 0.55));
+  transition: color 0.18s ease, border-color 0.18s ease, opacity 0.18s ease,
+    filter 0.18s ease;
+}
+
+.move__icon {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.move__name {
+  font-size: 0.52rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.move__key {
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  opacity: 0.6;
+}
+
+.move.is-active {
+  color: var(--washi);
+  border-bottom-color: rgba(216, 64, 44, 0.7);
+}
+
+.move.is-active .move__icon {
+  color: var(--blood-lit);
+}
+
+/* ---- off ---- */
+
+/*
+ * Switched off in the editor, or something else has the body. Drained rather
+ * than hidden: the shape stays where the player last saw it, and losing the
+ * colour is what says the key would do nothing.
+ */
+.tech.is-off,
+.seal.is-off,
+.move.is-off {
+  opacity: 0.3;
+  filter: grayscale(1);
+}
+
+/* --------------------------------------------------------- target keys */
+
+/*
+ * The keys that would land on the body under the aim, over its head — see
+ * `ui/TargetHotkeys.js`. A layer over the whole canvas, with one absolutely
+ * placed row per marked body moved by transform each frame; `overflow: hidden`
+ * keeps a body at the edge of the frame from pushing a scrollbar out.
+ */
+.target-keys {
+  position: fixed;
+  inset: 0;
+  z-index: 17;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+.target-keys__row {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  gap: 0.22rem;
+  /* The point the projection resolves is the row's bottom centre: it sits on
+     the head, and growing it lifts the caps rather than sliding them. */
+  transform-origin: bottom center;
+  will-change: transform, opacity;
+}
+
+/*
+ * Filled and rounded rather than outlined like the row along the bottom: this
+ * one is read in a fight, at a glance, over a moving body — so it has to hold
+ * its own against whatever is behind it. The colour is the ring's, because the
+ * cap and the circle under it are one mark.
+ */
+.target-key {
+  min-width: 1.15rem;
+  padding: 0.15rem 0.32rem;
+  border-radius: 0.42rem;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+  color: #180a04;
+  background: rgba(255, 138, 74, 0.92);
+  border: 1px solid rgba(255, 206, 170, 0.7);
+  box-shadow: 0 0 10px rgba(255, 122, 60, 0.4);
+  transition: color 0.16s ease, background 0.16s ease, border-color 0.16s ease,
+    box-shadow 0.16s ease, opacity 0.16s ease;
+}
+
+/*
+ * The key is still the right one; the body is simply busy with the other move.
+ * Dimmed rather than pulled, for the same reason the ability row dims a chip
+ * instead of removing it — a cap that vanished mid-swing would read as the
+ * target being lost.
+ */
+.target-key.is-off {
+  opacity: 0.55;
+  color: rgba(220, 232, 247, 0.8);
+  background: rgba(10, 14, 20, 0.68);
+  border-color: rgba(255, 138, 74, 0.3);
+  box-shadow: none;
+}
+
+/* ------------------------------------------------------------------ hint */
+
+/*
+ * The window's own keys, as opposed to the character's. Out of the way in the
+ * corner: the bottom centre belongs to the move panels now.
+ */
+.hint {
+  position: fixed;
+  right: 1rem;
+  bottom: 1.2rem;
+  margin: 0;
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-align: right;
+  color: rgba(220, 232, 247, 0.3);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* The studio has its own panels and none of these moves; both get out of the way. */
+body.cs-open .hud,
+body.cs-open .target-keys,
+body.cs-open .hint {
+  display: none;
+}
+
+/*
+ * The turning ring is the only thing in the HUD that moves on its own. Held
+ * still here — the state it reports is already carried by the seal's colour,
+ * so nothing is lost by stopping it.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .seal__ring,
+  .seal.is-active .seal__ring,
+  .seal.is-active .seal__disc {
+    animation: none;
+  }
+}

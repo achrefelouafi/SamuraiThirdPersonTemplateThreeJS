@@ -1,0 +1,24 @@
+# Cloudflare Pages header rules. Copied verbatim into dist/ by Vite.
+# First matching rule wins per header, so keep the specific paths above /*.
+
+# Vite fingerprints these filenames, so they can never go stale.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Unhashed binaries. Long-lived but revalidated, so replacing a model ships.
+/models/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/animations/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/hdri/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/textures/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: SAMEORIGIN

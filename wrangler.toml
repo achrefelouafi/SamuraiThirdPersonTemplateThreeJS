@@ -1,0 +1,5 @@
+name = "character-equipment"
+compatibility_date = "2026-08-17"
+
+# Static-site (Pages) project: `vite build` writes here and wrangler uploads it.
+pages_build_output_dir = "dist"

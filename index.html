@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Character Equipment — Three.js character stage</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23121820'/%3E%3Ccircle cx='16' cy='11' r='4' fill='%237fd4ff'/%3E%3Cpath d='M8 28c0-5 3.6-9 8-9s8 4 8 9z' fill='%237fd4ff'/%3E%3C/svg%3E"
+    />
+    <!-- No `<link rel="preload">` for the FBX: three's FileLoader fetches it
+         over a plain XHR, whose credentials mode matches neither the
+         crossorigin nor the bare form of an `as="fetch"` preload — Chrome
+         refuses the match and downloads the 1.4 MB file a second time. -->
+    <link rel="stylesheet" href="./src/ui/styles.css" />
+  </head>
+  <body>
+    <canvas id="viewport"></canvas>
+
+    <!-- Boot / loading veil -->
+    <div id="loader" class="loader">
+      <div class="loader__inner">
+        <h1 class="loader__title">Character Equipment</h1>
+        <div class="loader__bar"><i id="loader-fill"></i></div>
+        <p class="loader__status" id="loader-status">Lighting the stage…</p>
+      </div>
+    </div>
+
+    <!-- The window's keys. The character's own moves are the panels along the
+         bottom centre, drawn from `src/config/abilities.js`. -->
+    <p class="hint">
+      Drag to orbit · wheel to zoom · C character screen · G editor · F stats · P pause
+    </p>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
