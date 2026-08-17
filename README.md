@@ -454,3 +454,8 @@ screen.equipment.setBone('sword', 'LeftHand');
 screen.equipment.setPlacement('sword', { position: [0, 0.05, 0], rotation: [-90, 0, 0] });
 console.log(screen.equipment.snippet());          // paste over the catalog defaults
 ```
+
+## Credits
+
+- **Character model** — [dark_igorek](https://sketchfab.com/dark_igorek) on Sketchfab
+- **Textures** — [ambientCG](https://ambientcg.com)
